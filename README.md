@@ -44,7 +44,7 @@ cp env.example .env
 npm run dev
 ```
 
-The API will be available at `http://localhost:3000/api`
+The API will be available at `http://localhost:5050/api`
 
 ## 📡 API Endpoints
 
@@ -98,7 +98,7 @@ Copy `env.example` to `.env` and configure:
 ```bash
 # Server
 NODE_ENV=production
-PORT=3000
+PORT=5050
 
 # Whisper
 WHISPER_MODEL=base
@@ -196,7 +196,7 @@ ISC License
 For issues and questions:
 - Check the [Deployment Guide](./DEPLOYMENT.md)
 - Review logs: `pm2 logs speech-to-text-api`
-- Health check: `curl localhost:3000/api/health`
+- Health check: `curl localhost:5050/api/health`
 
 ## 🎯 Roadmap
 
