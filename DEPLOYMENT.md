@@ -49,7 +49,7 @@ Edit `.env` file with your settings:
 ```bash
 # Server
 NODE_ENV=production
-PORT=3000
+PORT=5050
 CORS_ORIGIN=https://yourdomain.com
 
 # Whisper
@@ -211,7 +211,7 @@ server {
     server_name yourdomain.com;
 
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:5050;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -401,4 +401,4 @@ tar -czf logs-backup-$(date +%Y%m%d).tar.gz ./logs
 For issues and support:
 - Check logs: `pm2 logs speech-to-text-api`
 - Monitor resources: `pm2 monit`
-- Health check: `curl localhost:3000/api/health`
+- Health check: `curl localhost:5050/api/health`

@@ -33,7 +33,7 @@ export interface Config {
 
 const config: Config = {
   // Server Configuration
-  port: parseInt(process.env.PORT || '3000'),
+  port: parseInt(process.env.PORT || '5050'),
   nodeEnv: process.env.NODE_ENV || 'development',
   
   // Whisper Configuration

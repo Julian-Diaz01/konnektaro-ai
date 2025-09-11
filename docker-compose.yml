@@ -4,10 +4,10 @@ services:
   speech-to-text-api:
     build: .
     ports:
-      - "3000:3000"
+      - "5050:5050"
     environment:
       - NODE_ENV=production
-      - PORT=3000
+      - PORT=5050
     env_file:
       - .env
     volumes:
