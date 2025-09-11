@@ -1,6 +1,6 @@
-# Speech-to-Text API
+# 🎤 Speech-to-Text API
 
-A production-ready Node.js API for speech-to-text conversion using local Whisper with Firebase authentication.
+A production-ready TypeScript API for speech-to-text conversion using local Whisper with Firebase authentication.
 
 ## ✨ Features
 
@@ -10,7 +10,7 @@ A production-ready Node.js API for speech-to-text conversion using local Whisper
 - 🌍 **Multi-Language Support** - 99+ languages supported
 - 🔄 **Multiple Audio Formats** - WAV, MP3, MP4, AAC, OGG, WebM, FLAC
 - 🛡️ **Production Ready** - Rate limiting, logging, error handling
-- 📊 **Scalable Architecture** - Modular, maintainable codebase
+- 📊 **Scalable Architecture** - Modular, maintainable TypeScript codebase
 - 🐳 **Docker Support** - Containerized deployment
 - 📈 **Monitoring** - Health checks, structured logging
 
@@ -27,7 +27,7 @@ A production-ready Node.js API for speech-to-text conversion using local Whisper
 
 ```bash
 # Clone repository
-git clone <your-repo-url>
+git clone https://github.com/yourusername/konnektaro-ai.git
 cd konnektaro-ai
 
 # Install dependencies
@@ -147,7 +147,37 @@ pm2 monit
 - **winston**: Structured logging
 
 ### Development Dependencies
+- **typescript**: TypeScript compiler
+- **@types/node**: Node.js type definitions
+- **@types/express**: Express type definitions
+- **ts-node**: TypeScript execution for Node.js
 - **dotenv**: Environment variable management
+
+## 🔥 Firebase Setup
+
+### 1. Create Firebase Project
+
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Create new project
+3. Enable Authentication
+4. Go to Project Settings → Service Accounts
+5. Generate new private key
+
+### 2. Configure Service Account
+
+**Option A: Environment Variables**
+```bash
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key here\n-----END PRIVATE KEY-----\n"
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project-id.iam.gserviceaccount.com
+```
+
+**Option B: Service Account File**
+```bash
+# Download service account JSON file
+# Place it in ./config/firebase-service-account.json
+FIREBASE_SERVICE_ACCOUNT_PATH=./config/firebase-service-account.json
+```
 
 ## 📄 License
 
@@ -167,3 +197,12 @@ For issues and questions:
 - Check the [Deployment Guide](./DEPLOYMENT.md)
 - Review logs: `pm2 logs speech-to-text-api`
 - Health check: `curl localhost:3000/api/health`
+
+## 🎯 Roadmap
+
+- [ ] WebSocket support for real-time transcription
+- [ ] Batch processing for multiple files
+- [ ] Custom model training
+- [ ] API rate limiting per user
+- [ ] Transcription history and management
+- [ ] Web interface for testing
