@@ -4,10 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node dist/server.js",
-    "dev": "ts-node src/server.ts",
+    "start": "PORT=5050 node dist/server.js",
+    "dev": "PORT=5050 ts-node src/server.ts",
     "build": "tsc",
-    "prod": "npm run build && NODE_ENV=production node dist/server.js",
+    "prod": "npm run build && NODE_ENV=production PORT=5050 node dist/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
