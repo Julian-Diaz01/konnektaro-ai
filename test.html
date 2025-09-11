@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech-to-Text Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            transition: border-color 0.3s;
+        }
+        .upload-area:hover {
+            border-color: #007bff;
+        }
+        .upload-area.dragover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        input[type="file"] {
+            margin: 20px 0;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+        .success {
+            background-color: #d4edda;
+            border-left-color: #28a745;
+            color: #155724;
+        }
+        .loading {
+            text-align: center;
+            color: #007bff;
+        }
+        .file-info {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Speech-to-Text Test</h1>
+        
+        <div class="upload-area" id="uploadArea">
+            <p>📁 Drag and drop an audio file here, or click to select</p>
+            <input type="file" id="audioFile" accept="audio/*" style="display: none;">
+            <button onclick="document.getElementById('audioFile').click()">Choose Audio File</button>
+        </div>
+
+        <div id="fileInfo" class="file-info" style="display: none;">
+            <strong>Selected file:</strong> <span id="fileName"></span><br>
+            <strong>Size:</strong> <span id="fileSize"></span>
+        </div>
+
+        <div style="text-align: center;">
+            <button id="uploadBtn" onclick="uploadAudio()" disabled>Upload & Transcribe</button>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const audioFile = document.getElementById('audioFile');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const result = document.getElementById('result');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+
+        let selectedFile = null;
+
+        // File selection handling
+        audioFile.addEventListener('change', handleFileSelect);
+
+        // Drag and drop handling
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        uploadArea.addEventListener('click', () => {
+            audioFile.click();
+        });
+
+        function handleFileSelect(e) {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        }
+
+        function handleFile(file) {
+            // Check if it's an audio file
+            if (!file.type.startsWith('audio/')) {
+                showResult('Please select an audio file.', 'error');
+                return;
+            }
+
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.style.display = 'block';
+            uploadBtn.disabled = false;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        async function uploadAudio() {
+            if (!selectedFile) {
+                showResult('Please select an audio file first.', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('audio', selectedFile);
+
+            uploadBtn.disabled = true;
+            showResult('Uploading and processing audio...', 'loading');
+
+            try {
+                console.log('Sending request to server...');
+                const response = await fetch('http://localhost:3000/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('Response received:', response.status, response.statusText);
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                if (response.ok) {
+                    showResult(`
+                        <h3>✅ Transcription Successful!</h3>
+                        <p><strong>Transcribed Text:</strong></p>
+                        <div style="background: white; padding: 15px; border-radius: 5px; margin: 10px 0; border: 1px solid #ddd;">
+                            ${data.transcription || 'No text detected'}
+                        </div>
+                        <p><strong>File:</strong> ${data.filename}</p>
+                        <p><strong>Size:</strong> ${formatFileSize(data.size)}</p>
+                        <p><strong>Processed at:</strong> ${new Date(data.timestamp).toLocaleString()}</p>
+                    `, 'success');
+                } else {
+                    showResult(`❌ Error: ${data.error || 'Unknown error occurred'}`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ Network Error: ${error.message}`, 'error');
+            } finally {
+                uploadBtn.disabled = false;
+            }
+        }
+
+        function showResult(message, type) {
+            result.innerHTML = message;
+            result.className = `result ${type}`;
+            result.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
