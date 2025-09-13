@@ -1,7 +1,6 @@
 import { spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
 import config from '../config';
 import logger from '../utils/logger';
 
@@ -21,18 +20,21 @@ export interface WhisperModel {
 
 class WhisperService {
   private outputDir: string;
-  private cacheDir: string;
+  private activeJobs: Set<string> = new Set();
+  private maxConcurrentJobs: number = 3; // Limit concurrent Whisper processes
+  private jobQueue: Array<() => Promise<void>> = [];
+  private isProcessingQueue: boolean = false;
 
   constructor() {
     this.outputDir = config.whisper.outputDir;
-    this.cacheDir = path.join(this.outputDir, 'cache');
     this.ensureOutputDir();
-    this.ensureCacheDir();
   }
 
-  private async preprocessAudio(inputPath: string): Promise<string> {
+  private async preprocessAudio(inputPath: string, userId: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      const outputPath = inputPath.replace(/\.[^/.]+$/, '_processed.wav');
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(7);
+      const outputPath = inputPath.replace(/\.[^/.]+$/, `_${userId}_${timestamp}_${randomId}_processed.wav`);
       
       // Use ffmpeg to convert and optimize audio for faster processing
       const ffmpegArgs = [
@@ -80,43 +82,27 @@ class WhisperService {
     }
   }
 
-  private ensureCacheDir(): void {
-    if (!fs.existsSync(this.cacheDir)) {
-      fs.mkdirSync(this.cacheDir, { recursive: true });
-      logger.info(`Created cache directory: ${this.cacheDir}`);
+
+  private async processQueue(): Promise<void> {
+    if (this.isProcessingQueue || this.jobQueue.length === 0) {
+      return;
     }
-  }
 
-  private getFileHash(filePath: string): string {
-    const fileBuffer = fs.readFileSync(filePath);
-    return crypto.createHash('md5').update(fileBuffer).digest('hex');
-  }
+    this.isProcessingQueue = true;
 
-  private getCachedTranscription(fileHash: string): TranscriptionResult | null {
-    const cacheFile = path.join(this.cacheDir, `${fileHash}.json`);
-    if (fs.existsSync(cacheFile)) {
-      try {
-        const cached = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
-        logger.info('Using cached transcription');
-        return cached;
-      } catch (error) {
-        logger.warn('Failed to read cache file:', error);
+    while (this.jobQueue.length > 0 && this.activeJobs.size < this.maxConcurrentJobs) {
+      const job = this.jobQueue.shift();
+      if (job) {
+        job().catch(error => {
+          logger.error('Job processing error:', error);
+        });
       }
     }
-    return null;
+
+    this.isProcessingQueue = false;
   }
 
-  private saveCachedTranscription(fileHash: string, result: TranscriptionResult): void {
-    const cacheFile = path.join(this.cacheDir, `${fileHash}.json`);
-    try {
-      fs.writeFileSync(cacheFile, JSON.stringify(result, null, 2));
-      logger.info(`Cached transcription: ${cacheFile}`);
-    } catch (error) {
-      logger.warn('Failed to save cache file:', error);
-    }
-  }
-
-  async transcribe(audioFilePath: string): Promise<TranscriptionResult> {
+  async transcribe(audioFilePath: string, userId: string = 'anonymous', language: string = 'en'): Promise<TranscriptionResult> {
     return new Promise(async (resolve, reject) => {
       try {
         logger.info(`Starting Whisper transcription for: ${audioFilePath}`);
@@ -126,13 +112,51 @@ class WhisperService {
           throw new Error('Audio file not found');
         }
 
-        // Check cache first
-        const fileHash = this.getFileHash(audioFilePath);
-        const cached = this.getCachedTranscription(fileHash);
-        if (cached) {
-          resolve(cached);
+        // Check if we can process immediately or need to queue
+        const jobId = `${userId}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        
+        if (this.activeJobs.size >= this.maxConcurrentJobs) {
+          logger.info(`Queueing transcription job ${jobId} - ${this.activeJobs.size} active jobs`);
+          
+          // Add to queue
+          this.jobQueue.push(async () => {
+            this.activeJobs.add(jobId);
+            try {
+              const result = await this.processTranscription(audioFilePath, userId, language);
+              resolve(result);
+            } catch (error) {
+              reject(error);
+            } finally {
+              this.activeJobs.delete(jobId);
+              this.processQueue(); // Process next in queue
+            }
+          });
+          
+          this.processQueue();
           return;
         }
+
+        // Process immediately
+        this.activeJobs.add(jobId);
+        try {
+          const result = await this.processTranscription(audioFilePath, userId, language);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        } finally {
+          this.activeJobs.delete(jobId);
+          this.processQueue(); // Process next in queue
+        }
+      } catch (error) {
+        logger.error('Whisper transcription error:', error);
+        reject(new Error(`Audio processing error: ${(error as Error).message}`));
+      }
+    });
+  }
+
+  private async processTranscription(audioFilePath: string, userId: string, language: string = 'en'): Promise<TranscriptionResult> {
+    return new Promise(async (resolve, reject) => {
+      try {
 
         // Get file info
         const stats = fs.statSync(audioFilePath);
@@ -140,14 +164,14 @@ class WhisperService {
         logger.info(`File size: ${fileSizeInMB} MB`);
 
         // Preprocess audio for faster transcription
-        const processedAudioPath = await this.preprocessAudio(audioFilePath);
+        const processedAudioPath = await this.preprocessAudio(audioFilePath, userId);
         const finalAudioPath = processedAudioPath !== audioFilePath ? processedAudioPath : audioFilePath;
 
         // Prepare Whisper command arguments with performance optimizations
         const whisperArgs = [
           finalAudioPath,
           '--model', config.whisper.model,
-          '--language', config.whisper.language,
+          '--language', language,
           '--output_dir', this.outputDir,
           '--output_format', 'txt',
           '--verbose', 'False',
@@ -199,13 +223,10 @@ class WhisperService {
               const result = {
                 text: transcription,
                 model: config.whisper.model,
-                language: config.whisper.language,
+                language: language,
                 processingTime: Date.now()
               };
 
-              // Cache the result
-              this.saveCachedTranscription(fileHash, result);
-              
               resolve(result);
             } else {
               reject(new Error('Whisper output file not found'));
@@ -249,6 +270,14 @@ class WhisperService {
     return [
       'en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh', 'ar', 'hi', 'th', 'vi', 'tr', 'pl', 'nl', 'sv', 'da', 'no', 'fi'
     ];
+  }
+
+  getQueueStatus(): { active: number; queued: number; maxConcurrent: number } {
+    return {
+      active: this.activeJobs.size,
+      queued: this.jobQueue.length,
+      maxConcurrent: this.maxConcurrentJobs
+    };
   }
 }
 

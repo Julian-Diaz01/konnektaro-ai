@@ -21,7 +21,9 @@ class TranscriptionController {
       logger.info(`Processing audio file: ${audioFilePath} for user: ${user?.email || 'anonymous'}`);
 
       // Convert audio to text using Whisper
-      const result = await whisperService.transcribe(audioFilePath);
+      const userId = user?.uid || 'anonymous';
+      const language = req.body.language || req.query.language || 'en'; // Default to English
+      const result = await whisperService.transcribe(audioFilePath, userId, language);
       
       // Clean up uploaded file
       fs.unlinkSync(audioFilePath);
@@ -64,7 +66,8 @@ class TranscriptionController {
         success: true,
         data: {
           models,
-          current: process.env.WHISPER_MODEL || 'base'
+          current: process.env.WHISPER_MODEL || 'tiny',
+          note: 'Model is fixed by the service for optimal performance'
         }
       });
     } catch (error) {
@@ -84,7 +87,8 @@ class TranscriptionController {
         success: true,
         data: {
           languages,
-          current: process.env.WHISPER_LANGUAGE || 'en'
+          default: 'en',
+          note: 'Language is optional in transcription requests, defaults to English'
         }
       });
     } catch (error) {
@@ -93,6 +97,26 @@ class TranscriptionController {
         success: false,
         error: 'Failed to get supported languages',
         code: 'LANGUAGES_FETCH_FAILED'
+      });
+    }
+  }
+
+  async getQueueStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const status = whisperService.getQueueStatus();
+      res.json({
+        success: true,
+        data: {
+          ...status,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      logger.error('Error getting queue status:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get queue status',
+        code: 'QUEUE_STATUS_FAILED'
       });
     }
   }

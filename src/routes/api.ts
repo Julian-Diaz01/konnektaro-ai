@@ -28,9 +28,10 @@ router.get('/', (req: Request, res: Response) => {
       version: process.env.npm_package_version || '1.0.0',
       endpoints: {
         health: 'GET /health - Service health check',
-        transcribe: 'POST /transcribe - Upload audio file for transcription',
-        models: 'GET /models - Get available Whisper models',
-        languages: 'GET /languages - Get supported languages'
+        transcribe: 'POST /transcribe - Upload audio file for transcription (language optional)',
+        models: 'GET /models - Get available Whisper models (read-only)',
+        languages: 'GET /languages - Get supported languages',
+        queueStatus: 'GET /queue-status - Get current queue status'
       },
       authentication: 'Bearer token required for transcription endpoints'
     }
@@ -42,6 +43,9 @@ router.get('/models', transcriptionController.getModels);
 
 // Get supported languages (public endpoint)
 router.get('/languages', transcriptionController.getLanguages);
+
+// Get queue status (public endpoint)
+router.get('/queue-status', transcriptionController.getQueueStatus);
 
 // Transcribe audio (authenticated endpoint)
 router.post('/transcribe', 
