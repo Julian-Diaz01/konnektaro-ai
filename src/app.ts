@@ -113,6 +113,12 @@ class App {
   public start(): void {
     const port = config.port;
     
+    // Get allowed origins for logging
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      process.env.FRONTEND_URL2
+    ].filter((origin): origin is string => Boolean(origin));
+    
     this.app.listen(port, () => {
       logger.info(`🚀 Server running on port ${port}`);
       logger.info(`📡 API endpoint: http://localhost:${port}/api`);
@@ -120,6 +126,7 @@ class App {
       logger.info(`🌍 Environment: ${config.nodeEnv}`);
       logger.info(`🎤 Whisper model: ${config.whisper.model}`);
       logger.info(`🗣️  Whisper language: ${config.whisper.language}`);
+      logger.info(`🔒 Allowed CORS origins: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'None configured'}`);
     });
   }
 }
