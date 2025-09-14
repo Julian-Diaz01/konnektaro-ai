@@ -20,9 +20,6 @@ class App {
   }
 
   private setupMiddleware(): void {
-    // Trust proxy for proper IP detection behind reverse proxy/load balancer
-    this.app.set('trust proxy', true);
-    
     // Security middleware
     this.app.use(helmet());
     
