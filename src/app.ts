@@ -24,10 +24,16 @@ class App {
     this.app.use(helmet());
     
     // CORS configuration
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      process.env.FRONTEND_URL2
+    ].filter((origin): origin is string => Boolean(origin));
+    
     this.app.use(cors({
-      origin: process.env.FRONTEND_URL || process.env.FRONTEND_URL2,
-      methods: ['GET', 'POST'],
-      allowedHeaders: ['Content-Type', 'Authorization']
+      origin: allowedOrigins,
+      methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      credentials: true
     }));
 
     // Compression middleware
