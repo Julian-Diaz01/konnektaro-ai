@@ -25,7 +25,7 @@ class App {
     
     // CORS configuration
     this.app.use(cors({
-      origin: process.env.CORS_ORIGIN || '*',
+      origin: process.env.FRONTEND_URL || process.env.FRONTEND_URL2,
       methods: ['GET', 'POST'],
       allowedHeaders: ['Content-Type', 'Authorization']
     }));
