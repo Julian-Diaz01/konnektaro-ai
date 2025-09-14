@@ -120,6 +120,16 @@ class App {
     ].filter((origin): origin is string => Boolean(origin));
     
     this.app.listen(port, () => {
+      // Always log startup messages to console for visibility
+      console.log(`🚀 Server running on port ${port}`);
+      console.log(`📡 API endpoint: http://localhost:${port}/api`);
+      console.log(`🏥 Health check: http://localhost:${port}/api/health`);
+      console.log(`🌍 Environment: ${config.nodeEnv}`);
+      console.log(`🎤 Whisper model: ${config.whisper.model}`);
+      console.log(`🗣️  Whisper language: ${config.whisper.language}`);
+      console.log(`🔒 Allowed CORS origins: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'None configured'}`);
+      
+      // Also log to winston logger for file logging
       logger.info(`🚀 Server running on port ${port}`);
       logger.info(`📡 API endpoint: http://localhost:${port}/api`);
       logger.info(`🏥 Health check: http://localhost:${port}/api/health`);
