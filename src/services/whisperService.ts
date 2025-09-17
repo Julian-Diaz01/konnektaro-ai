@@ -21,7 +21,7 @@ export interface WhisperModel {
 class WhisperService {
   private outputDir: string;
   private activeJobs: Set<string> = new Set();
-  private maxConcurrentJobs: number = 3; // Limit concurrent Whisper processes
+  private maxConcurrentJobs: number = parseInt(process.env.MAX_CONCURRENT_JOBS || '6'); // Increased concurrent jobs
   private jobQueue: Array<() => Promise<void>> = [];
   private isProcessingQueue: boolean = false;
 
@@ -156,6 +156,7 @@ class WhisperService {
 
   private async processTranscription(audioFilePath: string, userId: string, language: string = 'en'): Promise<TranscriptionResult> {
     return new Promise(async (resolve, reject) => {
+      const startTime = Date.now();
       try {
 
         // Get file info
@@ -178,7 +179,10 @@ class WhisperService {
           '--fp16', 'True', // Use half precision for faster processing
           '--condition_on_previous_text', 'False', // Disable for speed
           '--compression_ratio_threshold', '2.4', // Skip processing if compression is too high
-          '--no_speech_threshold', '0.6' // Skip if no speech detected
+          '--no_speech_threshold', '0.6', // Skip if no speech detected
+          '--temperature', '0.0', // Deterministic output for consistency
+          '--best_of', '1', // Reduce beam search for speed
+          '--beam_size', '1' // Single beam for faster processing
         ];
 
         logger.info(`Running Whisper command: whisper ${whisperArgs.join(' ')}`);
@@ -220,13 +224,15 @@ class WhisperService {
                 logger.info(`Cleaned up processed file: ${finalAudioPath}`);
               }
               
+              const processingTime = Date.now() - startTime;
               const result = {
                 text: transcription,
                 model: config.whisper.model,
                 language: language,
-                processingTime: Date.now()
+                processingTime: processingTime
               };
 
+              logger.info(`Transcription completed in ${processingTime}ms for ${fileSizeInMB}MB file`);
               resolve(result);
             } else {
               reject(new Error('Whisper output file not found'));

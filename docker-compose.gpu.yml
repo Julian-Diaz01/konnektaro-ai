@@ -1,26 +1,28 @@
-`version: '3.8'
+version: '3.8'
 
 services:
   speech-to-text-api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
     ports:
       - "5050:5050"
     environment:
       - NODE_ENV=production
       - PORT=5050
       - WHISPER_MODEL=base
-      - MAX_CONCURRENT_JOBS=6
+      - MAX_CONCURRENT_JOBS=8
     env_file:
       - .env
     runtime: nvidia
     deploy:
       resources:
         limits:
+          memory: 8G
+          cpus: '4.0'
+        reservations:
           memory: 4G
           cpus: '2.0'
-        reservations:
-          memory: 2G
-          cpus: '1.0'
     volumes:
       - ./logs:/app/logs
       - ./uploads:/app/uploads

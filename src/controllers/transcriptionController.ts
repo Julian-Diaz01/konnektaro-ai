@@ -3,6 +3,21 @@ import whisperService from '../services/whisperService';
 import logger from '../utils/logger';
 import fs from 'fs';
 
+// Performance metrics tracking
+interface PerformanceMetrics {
+  totalTranscriptions: number;
+  averageProcessingTime: number;
+  totalProcessingTime: number;
+  lastReset: string;
+}
+
+let performanceMetrics: PerformanceMetrics = {
+  totalTranscriptions: 0,
+  averageProcessingTime: 0,
+  totalProcessingTime: 0,
+  lastReset: new Date().toISOString()
+};
+
 class TranscriptionController {
   async transcribeAudio(req: Request, res: Response): Promise<void> {
     try {
@@ -29,6 +44,12 @@ class TranscriptionController {
       fs.unlinkSync(audioFilePath);
       logger.info(`File cleaned up: ${audioFilePath}`);
 
+      // Update performance metrics
+      performanceMetrics.totalTranscriptions++;
+      performanceMetrics.totalProcessingTime += result.processingTime;
+      performanceMetrics.averageProcessingTime = 
+        performanceMetrics.totalProcessingTime / performanceMetrics.totalTranscriptions;
+
       // Return successful response
       res.json({
         success: true,
@@ -38,6 +59,7 @@ class TranscriptionController {
           language: result.language,
           filename: req.file.originalname,
           size: req.file.size,
+          processingTime: result.processingTime,
           timestamp: new Date().toISOString()
         }
       });
@@ -117,6 +139,52 @@ class TranscriptionController {
         success: false,
         error: 'Failed to get queue status',
         code: 'QUEUE_STATUS_FAILED'
+      });
+    }
+  }
+
+  async getPerformanceMetrics(req: Request, res: Response): Promise<void> {
+    try {
+      const queueStatus = whisperService.getQueueStatus();
+      
+      res.json({
+        success: true,
+        data: {
+          performance: performanceMetrics,
+          queue: queueStatus,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      logger.error('Performance metrics error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get performance metrics',
+        message: (error as Error).message
+      });
+    }
+  }
+
+  async resetPerformanceMetrics(req: Request, res: Response): Promise<void> {
+    try {
+      performanceMetrics = {
+        totalTranscriptions: 0,
+        averageProcessingTime: 0,
+        totalProcessingTime: 0,
+        lastReset: new Date().toISOString()
+      };
+      
+      res.json({
+        success: true,
+        message: 'Performance metrics reset successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('Reset performance metrics error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to reset performance metrics',
+        message: (error as Error).message
       });
     }
   }

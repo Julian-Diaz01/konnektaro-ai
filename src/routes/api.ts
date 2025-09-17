@@ -31,7 +31,9 @@ router.get('/', (req: Request, res: Response) => {
         transcribe: 'POST /transcribe - Upload audio file for transcription (language optional)',
         models: 'GET /models - Get available Whisper models (read-only)',
         languages: 'GET /languages - Get supported languages',
-        queueStatus: 'GET /queue-status - Get current queue status'
+        queueStatus: 'GET /queue-status - Get current queue status',
+        performance: 'GET /performance - Get performance metrics',
+        performanceReset: 'POST /performance/reset - Reset performance metrics (authenticated)'
       },
       authentication: 'Bearer token required for transcription endpoints'
     }
@@ -46,6 +48,15 @@ router.get('/languages', transcriptionController.getLanguages);
 
 // Get queue status (public endpoint)
 router.get('/queue-status', transcriptionController.getQueueStatus);
+
+// Get performance metrics (public endpoint)
+router.get('/performance', transcriptionController.getPerformanceMetrics);
+
+// Reset performance metrics (authenticated endpoint)
+router.post('/performance/reset', 
+  verifyFirebaseToken,
+  transcriptionController.resetPerformanceMetrics
+);
 
 // Transcribe audio (authenticated endpoint)
 router.post('/transcribe', 

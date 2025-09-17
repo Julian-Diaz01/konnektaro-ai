@@ -38,7 +38,7 @@ const config: Config = {
   
   // Whisper Configuration
   whisper: {
-    model: process.env.WHISPER_MODEL || 'tiny', // Changed to tiny for faster processing
+    model: process.env.WHISPER_MODEL || 'base', // Upgraded to base for better accuracy
     language: process.env.WHISPER_LANGUAGE || 'en',
     outputDir: process.env.WHISPER_OUTPUT_DIR || './whisper_output'
   },
